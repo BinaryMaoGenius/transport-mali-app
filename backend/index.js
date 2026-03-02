@@ -7,8 +7,37 @@ dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
 
-app.use(cors());
+// Rate Limiter for security
+const rateLimiter = require('./middleware/rateLimiter');
+
+// Production CORS Settings
+const allowedOrigins = [
+    'http://localhost:5173', // Admin local
+    'http://localhost:5174', // Client local
+    process.env.FRONTEND_CLIENT_URL,
+    process.env.FRONTEND_ADMIN_URL
+].filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Non autorisé par CORS'));
+        }
+    }
+}));
+
 app.use(express.json());
+
+// Apply rate limiting to auth routes to prevent brute force
+const authLimiter = rateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // max 20 attempts
+    message: "Trop de tentatives de connexion. Réessayez dans 15 minutes."
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Routes
 const authRoutes = require('./routes/auth');
