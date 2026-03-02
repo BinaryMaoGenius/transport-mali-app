@@ -1,0 +1,110 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Role etc will be strings for SQLite compatibility
+// Role: USER, ADMIN
+// BusType: STANDARD, VIP
+// PaymentStatus: PENDING, SUCCESS, FAILED
+// ReservationStatus: CONFIRMED, CANCELLED, PENDING_PAYMENT
+
+model User {
+  id           String        @id @default(uuid())
+  phone        String        @unique
+  email        String?       @unique
+  password     String
+  name         String?
+  role         String        @default("USER")
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model City {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  originRoutes Route[] @relation("OriginCity")
+  destRoutes   Route[] @relation("DestinationCity")
+}
+
+model Route {
+  id            String @id @default(uuid())
+  originId      String
+  destinationId String
+  distanceKm    Float?
+  
+  origin        City   @relation("OriginCity", fields: [originId], references: [id])
+  destination   City   @relation("DestinationCity", fields: [destinationId], references: [id])
+  trips         Trip[]
+
+  @@unique([originId, destinationId])
+}
+
+model Bus {
+  id           String   @id @default(uuid())
+  plateNumber  String   @unique
+  type         String   @default("STANDARD")
+  capacity     Int
+  trips        Trip[]
+}
+
+model Trip {
+  id           String        @id @default(uuid())
+  routeId      String
+  busId        String
+  departureTime DateTime
+  arrivalTime  DateTime?
+  price        Float
+  availableSeats Int
+  
+  route        Route         @relation(fields: [routeId], references: [id])
+  bus          Bus           @relation(fields: [busId], references: [id])
+  reservations Reservation[]
+  seats        Seat[]
+}
+
+model Seat {
+  id           String        @id @default(uuid())
+  tripId       String
+  seatNumber   Int
+  isOccupied   Boolean       @default(false)
+  
+  trip         Trip          @relation(fields: [tripId], references: [id])
+  reservation  Reservation?  @relation(fields: [reservationId], references: [id])
+  reservationId String?
+}
+
+model Reservation {
+  id           String            @id @default(uuid())
+  userId       String
+  tripId       String
+  status       String @default("PENDING_PAYMENT")
+  totalPrice   Float
+  qrCode       String?
+  ticketNumber String            @unique
+  
+  user         User              @relation(fields: [userId], references: [id])
+  trip         Trip              @relation(fields: [tripId], references: [id])
+  seats        Seat[]
+  payment      Payment?
+  createdAt    DateTime          @default(now())
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  reservationId    String        @unique
+  amount           Float
+  method           String        // ORANGE_MONEY, MOOV_MONEY, CARD
+  transactionRef   String?       @unique
+  status           String @default("PENDING")
+  
+  reservation      Reservation   @relation(fields: [reservationId], references: [id])
+  createdAt        DateTime      @default(now())
+}
