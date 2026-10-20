@@ -33,6 +33,10 @@ D’après [`plan.md`](./plan.md) :
 
 *Projet en cours de construction.*
 
+## Licence
+
+Code sous [licence MIT](./LICENSE) · © 2026 Emmanuel Elisé Koné.
+
 ---
 
 Construit par **Emmanuel Elisé Koné** ([BinaryMaoGenius](https://github.com/BinaryMaoGenius)) · *La tech en clair*
